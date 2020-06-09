@@ -1,0 +1,118 @@
+import pandas as pd
+import numpy as np
+import requests
+import re
+from bs4 import BeautifulSoup
+import time as tm
+import xlwt
+
+def get_name_text(star_bs):
+    name = star_bs.select(".taptap-breadcrumb") 
+    name_zz = '<li class="active"><span>(.*?)</span></li>'
+    nameF = re.findall(name_zz, str(name), re.S) 
+    
+    return nameF
+
+def get_company_text(star_bs):
+    company = star_bs.select(".main-header-text") 
+    company_zz = '<span itemprop="name">(.*?)</span>'
+    companyF = re.findall(company_zz, str(company), re.S) 
+    
+    return companyF
+
+def get_company2_text(star_bs):
+    company2 = star_bs.select(".main-header-text") 
+    company2_zz = ' <span>发行商:(.*?)</span>'
+    company2F = re.findall(company2_zz, str(company2), re.S) 
+    
+    return company2F
+
+def get_install_text(star_bs):
+    install = star_bs.select(".header-text-download") 
+    install_zz = '<span class="count-stats">(.*?)</span>'
+    installF = re.findall(install_zz, str(install), re.S) 
+    
+    return installF
+
+def get_score_text(star_bs):
+    score = star_bs.select(".app-rating-container") 
+    score_zz = '<span class="app-rating-score" itemprop="ratingValue">(.*?)</span>'
+    scoreF = re.findall(score_zz, str(score),re.S)
+    
+    return scoreF
+
+url = 'https://www.taptap.com/top/download'
+star = requests.get(url) 
+star_bs = BeautifulSoup(star.text, "html.parser")  #把url对象转化为美味汤
+star_bs
+
+num = star_bs.select(".top-card-left") 
+#print(num)
+num_zz = '<a class="card-left-image" href="https://www.taptap.com/app/(.*?)" onclick=.*?>'
+numF = re.findall(num_zz, str(num),re.S)
+
+name_out = [] 
+company_out = [] 
+company2_out = []
+install_out = [] 
+score_out = [] 
+guanzhu_out=[]
+
+t1=tm.time()
+
+for i in range(len(numF)):
+    a = numF[i]
+    url = 'https://www.taptap.com/app/'
+    link = url + str(a)
+    #print(link)
+    star = requests.get(link) 
+    star_bs = BeautifulSoup(star.text, "html.parser")  #把url对象转化为美味汤
+    #print(star_bs)
+    name_tmp = get_name_text(star_bs) 
+    company_tmp = get_company_text(star_bs) 
+    install_tmp = get_install_text(star_bs)
+    #guanzhu_tmp = get_guanzhu_text(star_bs)
+    score_tmp = get_score_text(star_bs)
+     
+    name_out.append(name_tmp)
+    company_out.append(company_tmp)
+    #company2_out.extend(company2_tmp)
+    install_out.append(install_tmp)
+    #guanzhu_out.append(guanzhu_tmp)
+    score_out.append(score_tmp)
+    
+    print(name_tmp[0])
+    #print(company_tmp)
+    
+#写入EXCEL文件
+f = xlwt.Workbook(encoding='utf-8',style_compression=0)
+sheet1 = f.add_sheet('sheet1',cell_overwrite_ok=True)
+row0 = ["排名","产品名称","评分","安装人数","关注人数","开发商","发行商"]
+for i in range(0,len(row0)):
+    sheet1.write(0,i,row0[i])
+    
+for i in range(0,len(name_out)):
+    sheet1.write(i+1,0,i+1)
+    sheet1.write(i+1,1,name_out[i])
+    sheet1.write(i+1,2,score_out[i])
+    if len(install_out[i]) == 2:
+        sheet1.write(i+1,3,install_out[i][0])
+        sheet1.write(i+1,4,install_out[i][1])
+    else:
+        sheet1.write(i+1,4,install_out[i][0])
+        '''
+    sheet1.write(i+1,5,company_out[i][0])  
+    if len(company_out[i]) == 2:
+        sheet1.write(i+1,6,company_out[i][1])
+    else:
+        sheet1.write(i+1,6,"--")'''
+        
+#保存EXCEL文件
+f.save('C:\\Users\\popo\\Desktop\\taptap_data\\热门榜.xls') 
+
+#计时，用于调试
+t2 = tm.time()
+timing = t2-t1                            
+#输出爬取进度
+print('---------------耗时%5.2f秒---------------' %(timing))  
+print("I Can Do All Things!!!")
